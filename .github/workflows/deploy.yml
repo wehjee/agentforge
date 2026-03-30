@@ -33,7 +33,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: pnpm turbo build --filter=web
         env:
           NEXT_PUBLIC_BASE_PATH: /agentforge
 
