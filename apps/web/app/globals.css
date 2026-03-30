@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Sprout Design System — warm earthy palette */
+    --background: 30 33% 97%; /* #FAF6F2 warm-white */
+    --foreground: 13 27% 18%; /* #3E2723 slate-900 */
+    --card: 0 0% 100%;
+    --card-foreground: 13 27% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 13 27% 18%;
+    --primary: 13 27% 18%; /* slate-900 dark brown */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 25 19% 93%; /* slate-50 warm beige */
+    --secondary-foreground: 13 27% 18%;
+    --muted: 25 19% 93%;
+    --muted-foreground: 0 0% 45%; /* slate-500 */
+    --accent: 25 19% 93%;
+    --accent-foreground: 13 27% 18%;
+    --destructive: 0 100% 33%; /* #AA0008 */
+    --destructive-foreground: 0 0% 98%;
+    --border: 25 17% 84%; /* #E0D6C9 slate-200 */
+    --input: 25 17% 84%;
+    --ring: 122 40% 33%; /* #2E7D33 sage-600 */
+    --radius: 0.75rem;
+
+    /* Sprout color tokens as CSS custom properties */
+    --slate-950: #1C2A1F;
+    --slate-900: #3E2723;
+    --slate-800: #4E342E;
+    --slate-700: #5D4037;
+    --slate-600: #6D4C41;
+    --slate-500: #737373;
+    --slate-400: #A1887F;
+    --slate-300: #BCAAA4;
+    --slate-200: #E0D6C9;
+    --slate-100: #EFEBE9;
+    --slate-50: #F5F0EB;
+    --sage-600: #2E7D33;
+    --sage-500: #34D25C;
+    --sage-400: #4CAF52;
+    --sage-100: #C8E6CA;
+    --sage-50: #E8F5E9;
+    --gold-500: #B8941F;
+    --gold-400: #D4AD2E;
+    --gold-100: #FDF8E8;
+    --red-500: #AA0008;
+    --red-100: #FFEBEE;
+    --warm-white: #FAF6F2;
+    --white: #FFFFFF;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(62,39,35,0.04);
+    --shadow-md: 0 2px 8px rgba(62,39,35,0.06), 0 1px 2px rgba(62,39,35,0.04);
+    --shadow-lg: 0 8px 24px rgba(62,39,35,0.08), 0 2px 8px rgba(62,39,35,0.04);
+    --shadow-xl: 0 16px 48px rgba(62,39,35,0.1), 0 4px 12px rgba(62,39,35,0.05);
+    --shadow-focus: 0 0 0 3px rgba(46,125,51,0.12);
+
+    /* Motion */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+
+    /* Typography */
+    --font-body: 'Inter', -apple-system, sans-serif;
+    --font-display: 'Newsreader', Georgia, serif;
+  }
+}
+
+@layer base {
+  html {
+    font-size: 15px;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-warmWhite text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--slate-200);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--slate-300);
+}
+
+/* Keyframe animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: scale(0.97) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes chipIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

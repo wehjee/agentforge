@@ -1,0 +1,358 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  BUILDER
+  VIEWER
+}
+
+enum AgentStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ToolType {
+  BUILTIN
+  API
+  CODE
+}
+
+enum DocStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  PAUSED
+}
+
+enum Channel {
+  WIDGET
+  API
+  SLACK
+  SCHEDULED
+  PLAYGROUND
+}
+
+enum ConvStatus {
+  ACTIVE
+  COMPLETED
+  ESCALATED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+enum Env {
+  DEV
+  STAGING
+  PROD
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────
+
+model User {
+  id           String            @id @default(cuid())
+  email        String            @unique
+  name         String?
+  avatarUrl    String?
+  passwordHash String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  memberships  WorkspaceMember[]
+}
+
+model Workspace {
+  id             String            @id @default(cuid())
+  name           String
+  slug           String            @unique
+  plan           Plan              @default(FREE)
+  createdAt      DateTime          @default(now())
+  members        WorkspaceMember[]
+  agents         Agent[]
+  tools          Tool[]
+  knowledgeBases KnowledgeBase[]
+  workflows      Workflow[]
+  apiKeys        ApiKey[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  role        Role      @default(BUILDER)
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+
+  @@unique([userId, workspaceId])
+}
+
+model Agent {
+  id             String               @id @default(cuid())
+  name           String
+  description    String?
+  avatarUrl      String?
+  status         AgentStatus          @default(DRAFT)
+  config         Json
+  currentVersion Int                  @default(1)
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id])
+  workspaceId    String
+  createdBy      String
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  versions       AgentVersion[]
+  conversations  Conversation[]
+  tags           String[]
+  agentTools     AgentTool[]
+  agentKBs       AgentKnowledgeBase[]
+  deployments    Deployment[]
+  scheduledJobs  ScheduledJob[]
+}
+
+model AgentVersion {
+  id        String   @id @default(cuid())
+  version   Int
+  config    Json
+  changelog String?
+  agent     Agent    @relation(fields: [agentId], references: [id])
+  agentId   String
+  createdBy String
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id         String     @id @default(cuid())
+  channel    Channel
+  status     ConvStatus @default(ACTIVE)
+  metadata   Json?
+  variables  Json?
+  agent      Agent      @relation(fields: [agentId], references: [id])
+  agentId    String
+  messages   Message[]
+  tokenUsage Json?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([agentId])
+}
+
+model Message {
+  id              String       @id @default(cuid())
+  role            MessageRole
+  content         String
+  toolCalls       Json?
+  toolResults     Json?
+  retrievedChunks Json?
+  tokenUsage      Json?
+  latencyMs       Int?
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId  String
+  createdAt       DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+// ── Tools ──────────────────────────────────────────────────────────────────
+
+model Tool {
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  type        ToolType
+  schema      Json        // JSON Schema for input/output
+  config      Json        // endpoint, auth, handler code, etc.
+  isPublic    Boolean     @default(false)
+  workspace   Workspace?  @relation(fields: [workspaceId], references: [id])
+  workspaceId String?
+  agents      AgentTool[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model AgentTool {
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId String
+  tool    Tool   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  toolId  String
+  config  Json?
+
+  @@id([agentId, toolId])
+}
+
+// ── Knowledge Bases ────────────────────────────────────────────────────────
+
+model KnowledgeBase {
+  id          String               @id @default(cuid())
+  name        String
+  description String?
+  config      Json                 // chunking config, retrieval config
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+  documents   Document[]
+  agents      AgentKnowledgeBase[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+model AgentKnowledgeBase {
+  agent           Agent         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId         String
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  knowledgeBaseId String
+  config          Json?         // per-agent retrieval overrides
+
+  @@id([agentId, knowledgeBaseId])
+}
+
+model Document {
+  id              String        @id @default(cuid())
+  filename        String
+  mimeType        String
+  sizeBytes       Int
+  status          DocStatus     @default(PROCESSING)
+  storageKey      String
+  chunkCount      Int           @default(0)
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  knowledgeBaseId String
+  chunks          Chunk[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Chunk {
+  id         String   @id @default(cuid())
+  content    String
+  metadata   Json
+  embedding  Json?    // stored as number[] JSON for now, swap to pgvector later
+  tokenCount Int
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+
+  @@index([documentId])
+}
+
+// ── Workflows (Multi-Agent Orchestration) ────────────────────────────────
+
+model Workflow {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  canvas      Json          // React Flow serialized state
+  config      Json          // Trigger config, global settings
+  status      AgentStatus   @default(DRAFT)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+  runs        WorkflowRun[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([workspaceId])
+}
+
+model WorkflowRun {
+  id          String         @id @default(cuid())
+  status      RunStatus      @default(QUEUED)
+  triggerType String
+  triggerData Json?
+  context     Json           // Shared variables between nodes
+  steps       WorkflowStep[]
+  workflow    Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowId  String
+  startedAt   DateTime       @default(now())
+  completedAt DateTime?
+  error       String?
+
+  @@index([workflowId])
+}
+
+model WorkflowStep {
+  id          String      @id @default(cuid())
+  nodeId      String
+  nodeName    String
+  nodeType    String
+  status      RunStatus   @default(QUEUED)
+  input       Json?
+  output      Json?
+  tokenUsage  Json?
+  duration_ms Int?
+  error       String?
+  run         WorkflowRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId       String
+  startedAt   DateTime    @default(now())
+  completedAt DateTime?
+
+  @@index([runId])
+}
+
+// ── Deployments & API Keys ─────────────────────────────────────────────
+
+model Deployment {
+  id           String   @id @default(cuid())
+  channel      Channel
+  environment  Env
+  config       Json
+  agentVersion Int
+  isActive     Boolean  @default(true)
+  agent        Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([agentId])
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  key         String    @unique
+  hashedKey   String
+  lastUsedAt  DateTime?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+}
+
+model ScheduledJob {
+  id         String   @id @default(cuid())
+  cronExpr   String
+  timezone   String   @default("UTC")
+  isActive   Boolean  @default(true)
+  lastRunAt  DateTime?
+  nextRunAt  DateTime?
+  config     Json     // output routing, variables, etc.
+  agent      Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([agentId])
+}

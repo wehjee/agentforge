@@ -1,0 +1,51 @@
+// Phase 4: Multi-Agent Workflow Models
+// Added to schema.prisma — Workflow, WorkflowRun, WorkflowStep
+// Also added `workflows Workflow[]` to the Workspace model
+
+model Workflow {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  canvas      Json
+  config      Json
+  status      AgentStatus   @default(DRAFT)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+  runs        WorkflowRun[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  @@index([workspaceId])
+}
+
+model WorkflowRun {
+  id          String         @id @default(cuid())
+  status      RunStatus      @default(QUEUED)
+  triggerType String
+  triggerData Json?
+  context     Json
+  steps       WorkflowStep[]
+  workflow    Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowId  String
+  startedAt   DateTime       @default(now())
+  completedAt DateTime?
+  error       String?
+  @@index([workflowId])
+}
+
+model WorkflowStep {
+  id          String      @id @default(cuid())
+  nodeId      String
+  nodeName    String
+  nodeType    String
+  status      RunStatus   @default(QUEUED)
+  input       Json?
+  output      Json?
+  tokenUsage  Json?
+  duration_ms Int?
+  error       String?
+  run         WorkflowRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId       String
+  startedAt   DateTime    @default(now())
+  completedAt DateTime?
+  @@index([runId])
+}
